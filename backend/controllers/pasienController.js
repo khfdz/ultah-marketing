@@ -10,6 +10,8 @@ exports.getPasienAdvanced = (req, res) => {
         telp,
         range_tgl_awal,
         range_tgl_akhir,
+        bulan_awal,
+        bulan_akhir,
         page = 1,
         limit = 100,
     } = req.query;
@@ -17,7 +19,7 @@ exports.getPasienAdvanced = (req, res) => {
     const baseQuery = `FROM pasien WHERE 1=1`;
     let filterQuery = '';
     const params = [];
-    
+
     // Tambahkan filter ke filterQuery
     if (nama) {
         filterQuery += ` AND nm_pasien LIKE ?`;
@@ -45,24 +47,36 @@ exports.getPasienAdvanced = (req, res) => {
     }
     if (range_tgl_awal && range_tgl_akhir) {
         filterQuery += ` AND tgl_lahir BETWEEN ? AND ?`;
-        params.push(range_tgl_awal, range_tgl_akhir);
+        params.push(range_tgl_awal, range_tgl_akhir); // BENAR karena push(...[]) → di bawah
     }
-    
-    // Query untuk ambil data
-    const dataQuery = `SELECT no_rkm_medis, nm_pasien, jk, tgl_lahir, no_tlp ${baseQuery}${filterQuery} ORDER BY nm_pasien DESC LIMIT ? OFFSET ?`;
+    if (bulan_awal && bulan_akhir) {
+        filterQuery += ` AND MONTH(tgl_lahir) BETWEEN ? AND ?`;
+        params.push(bulan_awal, bulan_akhir); // BENAR karena push(...[]) → di bawah
+    }
+
+    const isDownload = req.query.download === 'true';
     const offset = (page - 1) * limit;
-    const dataParams = [...params, parseInt(limit), parseInt(offset)];
-    
-    // Query untuk count total
-    const countQuery = `SELECT COUNT(*) as total ${baseQuery}${filterQuery}`;
-    
-    // Eksekusi query
+
+    const dataQuery = `
+        SELECT no_rkm_medis, nm_pasien, jk, tgl_lahir, no_tlp
+        ${baseQuery}
+        ${filterQuery}
+        ORDER BY nm_pasien DESC
+        ${isDownload ? '' : 'LIMIT ? OFFSET ?'}
+    `;
+
+    const dataParams = isDownload
+        ? params
+        : [...params, parseInt(limit), parseInt(offset)];
+
+    const countQuery = `SELECT COUNT(*) as total ${baseQuery} ${filterQuery}`;
+
     db.query(dataQuery, dataParams, (err, results) => {
         if (err) return res.status(500).json({ error: err });
-    
+
         db.query(countQuery, params, (err2, countResult) => {
             if (err2) return res.status(500).json({ error: err2 });
-    
+
             res.json({
                 data: results,
                 total: countResult[0].total,
@@ -71,5 +85,4 @@ exports.getPasienAdvanced = (req, res) => {
             });
         });
     });
-    
-}
+};
