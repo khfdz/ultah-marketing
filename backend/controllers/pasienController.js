@@ -14,13 +14,14 @@ exports.getPasienAdvanced = (req, res) => {
         bulan_akhir,
         page = 1,
         limit = 100,
+        sort_by,
+        order,
     } = req.query;
 
     const baseQuery = `FROM pasien WHERE 1=1`;
     let filterQuery = '';
     const params = [];
 
-    // Tambahkan filter ke filterQuery
     if (nama) {
         filterQuery += ` AND nm_pasien LIKE ?`;
         params.push(`%${nama}%`);
@@ -47,21 +48,25 @@ exports.getPasienAdvanced = (req, res) => {
     }
     if (range_tgl_awal && range_tgl_akhir) {
         filterQuery += ` AND tgl_lahir BETWEEN ? AND ?`;
-        params.push(range_tgl_awal, range_tgl_akhir); // BENAR karena push(...[]) → di bawah
+        params.push(range_tgl_awal, range_tgl_akhir);
     }
     if (bulan_awal && bulan_akhir) {
         filterQuery += ` AND MONTH(tgl_lahir) BETWEEN ? AND ?`;
-        params.push(bulan_awal, bulan_akhir); // BENAR karena push(...[]) → di bawah
+        params.push(bulan_awal, bulan_akhir);
     }
 
     const isDownload = req.query.download === 'true';
     const offset = (page - 1) * limit;
 
+    const allowedSortColumns = ['nm_pasien', 'tgl_lahir', 'jk'];
+    const safeSortBy = allowedSortColumns.includes(sort_by) ? sort_by : 'nm_pasien';
+    const safeOrder = order === 'desc' ? 'DESC' : 'ASC';
+
     const dataQuery = `
         SELECT no_rkm_medis, nm_pasien, jk, tgl_lahir, no_tlp
         ${baseQuery}
         ${filterQuery}
-        ORDER BY nm_pasien DESC
+        ORDER BY ${safeSortBy} ${safeOrder}
         ${isDownload ? '' : 'LIMIT ? OFFSET ?'}
     `;
 
