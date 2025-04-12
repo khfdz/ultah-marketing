@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import Swal from "sweetalert2";
+import { useNavigate } from "react-router-dom"; 
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -22,6 +24,8 @@ const Login = () => {
       if (response.ok) {
         Swal.fire("Login berhasil!", "Selamat datang!", "success");
         localStorage.setItem("token", data.token);
+  
+        navigate("/pasien"); 
       } else {
         Swal.fire("Login gagal!", data.message, "error");
       }

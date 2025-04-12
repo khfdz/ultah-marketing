@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const ExcelJS = require("exceljs");
 
 exports.getPasienAdvanced = (req, res) => {
     const {
@@ -82,12 +83,40 @@ exports.getPasienAdvanced = (req, res) => {
         db.query(countQuery, params, (err2, countResult) => {
             if (err2) return res.status(500).json({ error: err2 });
 
-            res.json({
-                data: results,
-                total: countResult[0].total,
-                page: parseInt(page),
-                limit: parseInt(limit),
-            });
+            if (isDownload) {
+                const workbook = new ExcelJS.Workbook();
+                const worksheet = workbook.addWorksheet("Pasien");
+              
+                worksheet.columns = [
+                  { header: "Nama", key: "nm_pasien", width: 25 },
+                  { header: "Tanggal Lahir", key: "tgl_lahir", width: 20 },
+                  { header: "No Telp", key: "no_tlp", width: 20 },
+                ];
+              
+                results.forEach((item) => {
+                  worksheet.addRow(item);
+                });
+              
+                res.setHeader(
+                  "Content-Type",
+                  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                );
+                res.setHeader(
+                  "Content-Disposition",
+                  `attachment; filename="pasien_${Date.now()}.xlsx"`
+                );
+              
+                return workbook.xlsx.write(res).then(() => res.end());
+            } else {
+                res.json({
+                    data: results,
+                    total: countResult[0].total,
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                });
+            }
         });
     });
 };
+
+

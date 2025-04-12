@@ -1,7 +1,7 @@
 import React from "react";
 import Cleave from "cleave.js/react";
 
-const PasienFilters = ({ filters, setFilters }) => {
+const PasienFilters = ({ filters, setFilters, handleDownload }) => {
   const handleTanggalBulanChange = (value) => {
     const [tanggal, bulan] = value.split("-");
     setFilters((prev) => ({
@@ -93,6 +93,18 @@ const PasienFilters = ({ filters, setFilters }) => {
           onChange={(e) => setFilters({ ...filters, nama: e.target.value })}
           className="border border-gray-300 p-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
         />
+      </div>
+
+      <div className="flex flex-col w-40">
+        <label className="text-sm font-medium mb-1 text-gray-700">
+          Ambil Data
+        </label>
+        <button
+          onClick={handleDownload}
+          className="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-blue-500 text-white shadow hover:bg-blue-600"
+        >
+          Download
+        </button>
       </div>
     </div>
   );
