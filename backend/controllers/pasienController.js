@@ -1,5 +1,4 @@
 const db = require('../config/db');
-const ExcelJS = require("exceljs");
 
 exports.getPasienAdvanced = (req, res) => {
     const {
@@ -11,18 +10,15 @@ exports.getPasienAdvanced = (req, res) => {
         telp,
         range_tgl_awal,
         range_tgl_akhir,
-        bulan_awal,
-        bulan_akhir,
         page = 1,
         limit = 100,
-        sort_by,
-        order,
     } = req.query;
 
     const baseQuery = `FROM pasien WHERE 1=1`;
     let filterQuery = '';
     const params = [];
-
+    
+    // Tambahkan filter ke filterQuery
     if (nama) {
         filterQuery += ` AND nm_pasien LIKE ?`;
         params.push(`%${nama}%`);
@@ -51,72 +47,29 @@ exports.getPasienAdvanced = (req, res) => {
         filterQuery += ` AND tgl_lahir BETWEEN ? AND ?`;
         params.push(range_tgl_awal, range_tgl_akhir);
     }
-    if (bulan_awal && bulan_akhir) {
-        filterQuery += ` AND MONTH(tgl_lahir) BETWEEN ? AND ?`;
-        params.push(bulan_awal, bulan_akhir);
-    }
-
-    const isDownload = req.query.download === 'true';
+    
+    // Query untuk ambil data
+    const dataQuery = `SELECT no_rkm_medis, nm_pasien, jk, tgl_lahir, no_tlp ${baseQuery}${filterQuery} ORDER BY nm_pasien DESC LIMIT ? OFFSET ?`;
     const offset = (page - 1) * limit;
-
-    const allowedSortColumns = ['nm_pasien', 'tgl_lahir', 'jk'];
-    const safeSortBy = allowedSortColumns.includes(sort_by) ? sort_by : 'nm_pasien';
-    const safeOrder = order === 'desc' ? 'DESC' : 'ASC';
-
-    const dataQuery = `
-        SELECT no_rkm_medis, nm_pasien, jk, tgl_lahir, no_tlp
-        ${baseQuery}
-        ${filterQuery}
-        ORDER BY ${safeSortBy} ${safeOrder}
-        ${isDownload ? '' : 'LIMIT ? OFFSET ?'}
-    `;
-
-    const dataParams = isDownload
-        ? params
-        : [...params, parseInt(limit), parseInt(offset)];
-
-    const countQuery = `SELECT COUNT(*) as total ${baseQuery} ${filterQuery}`;
-
+    const dataParams = [...params, parseInt(limit), parseInt(offset)];
+    
+    // Query untuk count total
+    const countQuery = `SELECT COUNT(*) as total ${baseQuery}${filterQuery}`;
+    
+    // Eksekusi query
     db.query(dataQuery, dataParams, (err, results) => {
         if (err) return res.status(500).json({ error: err });
-
+    
         db.query(countQuery, params, (err2, countResult) => {
             if (err2) return res.status(500).json({ error: err2 });
-
-            if (isDownload) {
-                const workbook = new ExcelJS.Workbook();
-                const worksheet = workbook.addWorksheet("Pasien");
-              
-                worksheet.columns = [
-                  { header: "Nama", key: "nm_pasien", width: 25 },
-                  { header: "Tanggal Lahir", key: "tgl_lahir", width: 20 },
-                  { header: "No Telp", key: "no_tlp", width: 20 },
-                ];
-              
-                results.forEach((item) => {
-                  worksheet.addRow(item);
-                });
-              
-                res.setHeader(
-                  "Content-Type",
-                  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                );
-                res.setHeader(
-                  "Content-Disposition",
-                  `attachment; filename="pasien_${Date.now()}.xlsx"`
-                );
-              
-                return workbook.xlsx.write(res).then(() => res.end());
-            } else {
-                res.json({
-                    data: results,
-                    total: countResult[0].total,
-                    page: parseInt(page),
-                    limit: parseInt(limit),
-                });
-            }
+    
+            res.json({
+                data: results,
+                total: countResult[0].total,
+                page: parseInt(page),
+                limit: parseInt(limit),
+            });
         });
     });
-};
-
-
+    
+}

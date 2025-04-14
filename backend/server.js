@@ -2,6 +2,7 @@ const express = require('express');
 require('dotenv').config();
 const db = require('./config/db');
 const cors = require('cors');
+const path = require('path');
 
 const authRoutes = require('./routes/authRoutes');
 const pasienRoutes = require('./routes/pasienRoutes');
@@ -16,8 +17,13 @@ app.use(cors({
   
 
 app.use(express.json());
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
 app.use('/api/auth', authRoutes);
 app.use('/api/pasien', pasienRoutes);
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+});
 
 app.listen(port, () => {
     console.log(`Server berjalan di port ${port}`);
